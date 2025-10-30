@@ -1,0 +1,95 @@
+version: "3.9"
+
+# Networks configuration
+networks:
+  shared-network:
+    external: true
+
+# Services configuration
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ask_service
+    ports:
+      - "52015:52015"
+    environment:
+      - MONGO_URL=${MONGO_URI}
+      - REDIS_URL=${REDIS_URL}
+      - MONGO_BG_DB_URI=${MONGO_BG_DB_URI}
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - shared-network
+    # Added healthcheck for fastapi
+    #healthcheck:
+     # test: ["CMD", "curl", "-f", "http://localhost:52015/health"]
+     # interval: 30s
+     # timeout: 10s
+     # retries: 3
+    # Added restart policy
+    restart: always
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo_ask
+    ports:
+      - "27035:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_DB_NAME=${MONGO_DB_NAME}
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+    restart: always
+    networks:
+      - shared-network
+    # Added healthcheck for mongo
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:latest
+    container_name: redis_ask
+    ports:
+      - "6391:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+    networks:
+      - shared-network
+
+# Volumes configuration with labels and driver options
+volumes:
+  mongo_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/mongo
+    labels:
+      environment: "production"
+      service: "mongodb"
+  redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/redis
+    labels:
+      environment: "production"
+      service: "redis"
