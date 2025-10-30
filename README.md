@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 # 3. Run locally
 uvicorn app.main:app --reload
-
+```
 
 ### Example curl
 
@@ -64,7 +64,6 @@ curl -X POST "http://127.0.0.1:8000/ask" \
 |Layer|Tools|
 |---|---|
 |API|FastAPI|
-|AI Orchestration|LangChain|
 |Database|MongoDB|
 |Deployment|Docker / Uvicorn|
 
